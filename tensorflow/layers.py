@@ -1,24 +1,23 @@
 import tensorflow as tf
 
-class Conv1D(tf.layers.Conv1D):
+class CausalConv1D(tf.layers.Conv1D):
     def __init__(self, filters,
-               kernel_size,
-               strides=1,
-               dilation_rate=1,
-               activation=None,
-               use_bias=True,
-               kernel_initializer=None,
-               bias_initializer=tf.zeros_initializer(),
-               kernel_regularizer=None,
-               bias_regularizer=None,
-               activity_regularizer=None,
-               kernel_constraint=None,
-               bias_constraint=None,
-               trainable=True,
-               name=None,
-               is_causal=False
-               **kwargs):
-        super(Conv1D, self).__init__(
+                 kernel_size,
+                 strides=1,
+                 dilation_rate=1,
+                 activation=None,
+                 use_bias=True,
+                 kernel_initializer=None,
+                 bias_initializer=tf.zeros_initializer(),
+                 kernel_regularizer=None,
+                 bias_regularizer=None,
+                 activity_regularizer=None,
+                 kernel_constraint=None,
+                 bias_constraint=None,
+                 trainable=True,
+                 name=None,
+                 **kwargs):
+        super(CausalConv1D, self).__init__(
             filters=filters,
             kernel_size=kernel_size,
             strides=strides,
@@ -35,12 +34,12 @@ class Conv1D(tf.layers.Conv1D):
             kernel_constraint=kernel_constraint,
             bias_constraint=bias_constraint,
             trainable=trainable,
-            name=name, **kwargs
+            name=name,
+            **kwargs
         )
        
     def call(self, inputs):
-        if self.is_causal:
-            padding = (self.kernel_size[0] - 1) * self.dilation_rate[0]
-            inputs = tf.pad(inputs, tf.constant([(0, 0,), (1, 0), (0, 0)]) * padding)
-        return super(Conv1D, self).call(inputs)
-        
+        padding = (self.kernel_size[0] - 1) * self.dilation_rate[0]
+        inputs = tf.pad(inputs,
+                        tf.constant([(0, 0,), (1, 0), (0, 0)]) * padding)
+        return super(CausalConv1D, self).call(inputs)
