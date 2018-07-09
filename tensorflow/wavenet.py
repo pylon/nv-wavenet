@@ -56,7 +56,6 @@ class WaveNet(tf.layers.Layer):
         loop_factor = math.floor(math.log2(max_dilation)) + 1
         for i in range(n_layers):
             dilation = 2 ** (i % loop_factor)
-            print(dilation)
 
             # Kernel size is 2 for nv-wavenet
             in_layer = CausalConv1D(2*n_residual_channels,
@@ -83,7 +82,6 @@ class WaveNet(tf.layers.Layer):
         forward_input = inputs[1]
         cond_input = self.upsampling(features)
         cond_input = tf.transpose(cond_input, (0, 2, 1))
-        print(cond_input)
 
         assert(cond_input.shape[2]) >= forward_input.shape[1]
         if cond_input.shape[2] > forward_input.shape[1]:
@@ -92,17 +90,13 @@ class WaveNet(tf.layers.Layer):
         forward_input = tf.nn.embedding_lookup(
             self.embeddings, tf.cast(forward_input, dtype=tf.int32))
         forward_input = tf.transpose(forward_input, (0, 2, 1))
-        print(forward_input)
 
         cond_acts = self.cond_layers(cond_input)
-        print(cond_acts)
         cond_acts = tf.reshape(cond_acts, [cond_acts.shape[0],
                                            self.n_layers, -1, cond_acts.shape[2]])
-        print(cond_acts)
 
         for i in range(self.n_layers):
             in_act = self.dilate_layers[i](forward_input)
-            print(in_act)
             in_act = in_act + cond_acts[:, i, :, :]
             t_act = tf.nn.tanh(in_act[:, :self.n_residual_channels, :])
             s_act = tf.nn.sigmoid(in_act[:, self.n_residual_channels:, :])
