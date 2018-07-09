@@ -6,7 +6,6 @@ from __future__ import print_function
 import tensorflow as tf
 import math
 from layers import CausalConv1D, Conv1DTranspose
-import keras
 
 
 class WaveNet(tf.layers.Layer):
@@ -127,6 +126,6 @@ class WaveNet(tf.layers.Layer):
             output = output[:, :, :-1]
 
             first = last * 0.0
-            outputs = tf.concat([first, output], axis=2)
+            output = tf.concat([first, output], axis=2)
 
-            return outputs
+            return output
