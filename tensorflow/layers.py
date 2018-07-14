@@ -7,8 +7,8 @@ class CausalConv1D(tf.layers.Conv1D):
                  dilation_rate=1,
                  activation=None,
                  use_bias=True,
-                 kernel_initializer=None,
-                 bias_initializer=tf.zeros_initializer(),
+                 kernel_initializer=tf.glorot_uniform_initializer(),
+                 bias_initializer=None,
                  kernel_regularizer=None,
                  bias_regularizer=None,
                  activity_regularizer=None,
@@ -39,9 +39,10 @@ class CausalConv1D(tf.layers.Conv1D):
         )
        
     def call(self, inputs):
-        padding = (self.kernel_size[0] - 1) * self.dilation_rate
-        inputs = tf.pad(inputs,
-                        tf.constant([(0, 0,), (0,0), (0, 1)]) * padding)
+        padding = (self.kernel_size[0] - 1) * self.dilation_rate[0]
+        inputs = tf.pad(inputs, tf.constant(
+            [(0, 0,), (0, 0), (1, 0)]) * padding)
+
         return super(CausalConv1D, self).call(inputs)
 
 class Conv1DTranspose(tf.layers.Layer):

@@ -4,6 +4,7 @@ from __future__ import print_function
 
 # Imports
 import tensorflow as tf
+import numpy as np
 import math
 from layers import CausalConv1D, Conv1DTranspose
 
@@ -33,7 +34,12 @@ class WaveNet(tf.layers.Layer):
         self.cond_layers = tf.layers.Conv1D(2*n_residual_channels*n_layers,
                                             kernel_size=1,
                                             activation=tf.nn.tanh,
-                                            data_format='channels_first')
+                                            data_format='channels_first',
+                                            kernel_initializer=tf.glorot_uniform_initializer(),
+                                            bias_initializer=tf.glorot_uniform_initializer(),
+                                            kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                            bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                            padding='same')
         self.upsampling = Conv1DTranspose(n_cond_channels,
                                           upsamp_window,
                                           upsamp_stride)
@@ -46,12 +52,22 @@ class WaveNet(tf.layers.Layer):
                                          kernel_size=1,
                                          use_bias=False,
                                          activation=tf.nn.relu,
-                                         data_format='channels_first')
+                                         data_format='channels_first',
+                                         kernel_initializer=tf.glorot_uniform_initializer(),
+                                         bias_initializer=tf.glorot_uniform_initializer(),
+                                         kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                         bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                         padding='same')
         self.conv_end = tf.layers.Conv1D(n_out_channels,
                                          kernel_size=1,
                                          use_bias=False,
                                          activation=None,
-                                         data_format='channels_first')
+                                         data_format='channels_first',
+                                         kernel_initializer=tf.glorot_uniform_initializer(),
+                                         bias_initializer=tf.glorot_uniform_initializer(),
+                                         kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                         bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                         padding='same')
 
         loop_factor = math.floor(math.log2(max_dilation)) + 1
         for i in range(n_layers):
@@ -67,13 +83,23 @@ class WaveNet(tf.layers.Layer):
                 res_layer = tf.layers.Conv1D(n_residual_channels,
                                              kernel_size=1,
                                              activation=None,
-                                             data_format='channels_first')
+                                             data_format='channels_first',
+                                             kernel_initializer=tf.glorot_uniform_initializer(),
+                                             padding='same',
+                                             bias_initializer=tf.glorot_uniform_initializer(),
+                                             kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                             bias_regularizer=tf.contrib.layers.l1_l2_regularizer())
                 self.res_layers.append(res_layer)
 
             skip_layer = tf.layers.Conv1D(n_skip_channels,
                                           kernel_size=1,
                                           activation=tf.nn.relu,
-                                          data_format='channels_first')
+                                          data_format='channels_first',
+                                          kernel_initializer=tf.glorot_uniform_initializer(),
+                                          bias_initializer=tf.glorot_uniform_initializer(),
+                                          kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                          bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+                                          padding='same')
             self.skip_layers.append(skip_layer)
 
     def call(self, inputs, training=True):
@@ -82,18 +108,18 @@ class WaveNet(tf.layers.Layer):
         forward_input = inputs[1]
         cond_input = self.upsampling(features)
         cond_input = tf.transpose(cond_input, (0, 2, 1))
-
-        assert(cond_input.shape[2]) >= forward_input.shape[1]
+       
+        #assert(cond_input.shape[2]) >= forward_input.shape[1]
         if cond_input.shape[2] > forward_input.shape[1]:
             cond_input = cond_input[:, :, :forward_input.shape[1]]
+        
 
         forward_input = tf.nn.embedding_lookup(
             self.embeddings, tf.cast(forward_input, dtype=tf.int32))
         forward_input = tf.transpose(forward_input, (0, 2, 1))
 
         cond_acts = self.cond_layers(cond_input)
-        cond_acts = tf.reshape(cond_acts, [cond_acts.shape[0],
-                                           self.n_layers, -1, cond_acts.shape[2]])
+        cond_acts = tf.reshape(cond_acts, [tf.shape(cond_acts)[0], self.n_layers, -1, tf.shape(cond_acts)[2]])
 
         for i in range(self.n_layers):
             in_act = self.dilate_layers[i](forward_input)
@@ -110,16 +136,16 @@ class WaveNet(tf.layers.Layer):
             else:
                 output = self.skip_layers[i](acts) + output
 
-            output = tf.nn.relu(output)
-            output = self.conv_out(output)
-            output = tf.nn.relu(output)
-            output = self.conv_end(output)
+        output = tf.nn.relu(output)
+        output = self.conv_out(output)
+        output = tf.nn.relu(output)
+        output = self.conv_end(output)
 
-            last = output[:, :, -1]
-            last = tf.expand_dims(last, 2)
-            output = output[:, :, :-1]
+        last = output[:, :, -1]
+        last = tf.expand_dims(last, 2)
+        output = output[:, :, :-1]
 
-            first = last * 0.0
-            output = tf.concat([first, output], axis=2)
+        first = last * 0.0
+        output = tf.concat([first, output], axis=2)
 
-            return output
+        return output
