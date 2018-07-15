@@ -17,41 +17,41 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch_size', default=6, type=int, help='batch size')
+parser.add_argument('--batch_size', default=2, type=int, help='batch size')
 parser.add_argument('--train_steps', default=1000000, type=int,
                         help='number of training steps')
 
+class WaveNetEstimator(tf.estimator.Estimator):
+    def model_fn(features, labels, mode, params):
+        """Model function for custom WaveNetEsimator"""
+        model = WaveNet(**params)
+        logits = model((features, labels))
+        logits = tf.transpose(logits, [0, 2, 1])
 
-def model_fn(features, labels, mode, params):
-    """Model function for custom WaveNetEsimator"""
-    model = WaveNet(**params)
-    logits = model((features, labels))
-    logits = tf.transpose(logits, [0, 2, 1])
+        labels = tf.one_hot(tf.cast(labels, dtype=tf.int32), 256)
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            predictions = {
+                'probabilities':  tf.nn.softmax(logits),
+                'logits': logits
+            }
 
-    labels = tf.one_hot(tf.cast(labels, dtype=tf.int32), 256)
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        predictions = {
-            'probabilities':  tf.nn.softmax(logits),
-            'logits': logits
-        }
+        loss = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=logits)
 
-    loss = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=logits)
+        accuracy = tf.metrics.accuracy(labels=labels,
+                                    predictions=logits)
+        metrics = {'accuracy': accuracy,
+                'loss': loss}
+        tf.summary.scalar('accuracy', accuracy)
+        tf.summary.scalar('loss', loss)
 
-    accuracy = tf.metrics.accuracy(labels=labels,
-                                   predictions=logits)
-    metrics = {'accuracy': accuracy,
-               'loss': loss}
-    tf.summary.scalar('accuracy', accuracy[1])
-    tf.summary.scalar('loss', loss)
-
-    if mode == tf.estimator.ModeKeys.EVAL:
-        return tf.estimator.EstimatorSpec(
-            mode, loss=loss, eval_metric_ops=metrics
-        )
-    assert mode == tf.estimator.ModeKeys.TRAIN
-    optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
-    train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
-    return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+        if mode == tf.estimator.ModeKeys.EVAL:
+            return tf.estimator.EstimatorSpec(
+                mode, loss=loss, eval_metric_ops=metrics
+            )
+        assert mode == tf.estimator.ModeKeys.TRAIN
+        optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
+        train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
+        return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
 
 def train_input_fn(features, labels, batch_size):
@@ -78,6 +78,7 @@ def main(argv):
 
     classifier = tf.estimator.Estimator(
             model_fn=model_fn,
+            model_dir='./logs',
             params={
             'n_in_channels': 256,
             'n_layers': 16,
