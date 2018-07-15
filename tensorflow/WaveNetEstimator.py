@@ -6,38 +6,50 @@ from __future__ import print_function
 
 import argparse
 import tensorflow as tf
+import numpy as np
+import json
+import os
 
 from wavenet import WaveNet
-from ..pytorch.wavenet_utils import mu_law_decode_numpy
+from mel2samp_onehot import Mel2SampOnehot
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--batch_size', default=6, type=int, help='batch size')
+parser.add_argument('--train_steps', default=1000000, type=int,
+                        help='number of training steps')
 
 
 def model_fn(features, labels, mode, params):
     """Model function for custom WaveNetEsimator"""
     model = WaveNet(**params)
     logits = model((features, labels))
+    logits = tf.transpose(logits, [0, 2, 1])
 
+    labels = tf.one_hot(tf.cast(labels, dtype=tf.int32), 256)
     if mode == tf.estimator.ModeKeys.PREDICT:
         predictions = {
             'probabilities':  tf.nn.softmax(logits),
             'logits': logits
         }
 
-    loss = tf.losses.softmax_cross_entropy(labels=lables, logits=logits)
+    loss = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=logits)
 
-    accuracy = tf.metrics.accuracy(lables=lables,
+    accuracy = tf.metrics.accuracy(labels=labels,
                                    predictions=logits)
     metrics = {'accuracy': accuracy,
                'loss': loss}
     tf.summary.scalar('accuracy', accuracy[1])
-    tf.summar.scalar('loss', loss)
+    tf.summary.scalar('loss', loss)
 
     if mode == tf.estimator.ModeKeys.EVAL:
         return tf.estimator.EstimatorSpec(
             mode, loss=loss, eval_metric_ops=metrics
         )
-    assert model == tf.estimator.ModeKeys.train_input_fn
-    optimizer = tf.train.AdamOptimizer(learning_rate = params['learning_rate'])
+    assert mode == tf.estimator.ModeKeys.TRAIN
+    optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
     train_op = optimizer.minimize(loss, global_step=tf.train.get_global_step())
     return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
 
@@ -47,38 +59,45 @@ def train_input_fn(features, labels, batch_size):
     dataset = dataset.shuffle(1000).repeat().batch(batch_size)
     return dataset.make_one_shot_iterator().get_next()
 
+
 def main(argv):
     args = parser.parse_args(argv[1:])
 
-    (train_x, train_y) = train_input_fn(features, labels, batch_size)
-
-    feature_columns = [tf.feature_column.numeric_column(key=key) for key in train_x.keys()]
+    filelist = '/home/will/pylon-wavenet/pytorch/shelby.json'
+    print("Loading data....")
+    with open(filelist) as f:
+        data = f.read()
+        config = json.loads(data)
+        data_config = config["data_config"]
+        prepare = Mel2SampOnehot(**data_config)
+        dataset = prepare.preprocess()
+        features, labels = dataset
+        features = tf.convert_to_tensor(np.asarray(features), dtype=tf.float32)
+        labels = tf.convert_to_tensor(np.asarray(labels))
+    print("Load complete....")
 
     classifier = tf.estimator.Estimator(
-        model_fn=model_fn,
-        params={
-            'feature_columns': feature_columns
-            'n_in_channels': 256
-            'n_layers': 16
-            'max_dilation': 128
-            'n_residual_channels': 64
-            'n_skip_channels': 256
-            'n_out_channels':256
-            'n_cond_channels':80
-            'upsamp_window':1024
-            'upsamp_stride':256
-            'learning_rate':1e-3
+            model_fn=model_fn,
+            params={
+            'n_in_channels': 256,
+            'n_layers': 16,
+            'max_dilation': 128,
+            'n_residual_channels': 64,
+            'n_skip_channels': 256,
+            'n_out_channels': 256,
+            'n_cond_channels': 80,
+            'upsamp_window': 1024,
+            'upsamp_stride': 256
         }
     )
 
     classifier.train(
-        input_fn=input_fn(train_x, train_y, args.batch_size)
+        input_fn=lambda: train_input_fn(features, labels, args.batch_size),
         steps=args.train_steps
     )
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=100, type=int, help='batch size')
-    parser.add_argument('--train_steps', default=1000, type=int,
-                    help='number of training steps')
+    
+    tf.logging.set_verbosity(tf.logging.INFO)
+    tf.app.run(main)
