@@ -27,10 +27,6 @@ class WaveNetEstimator(object):
     def __init__(self, model_dir, params):
         self.model_dir = model_dir
         self.params = params
-        self.config = tf.estimator.RunConfig(
-            save_checkpoints_secs=None,
-            save_checkpoints_steps=1000
-        )
 
 
     def model_fn(features, labels, mode, params):
@@ -81,8 +77,7 @@ class WaveNetEstimator(object):
         classifier = tf.estimator.Estimator(
             model_fn = self.model_fn,
             model_dir = self.model_dir,
-            params = self.params,
-            config = self.config
+            params = self.params
         )
         return classifier
 

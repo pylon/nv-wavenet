@@ -39,18 +39,29 @@ class WaveNet(tf.layers.Layer):
                                             bias_initializer=tf.glorot_uniform_initializer(),
                                             kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
                                             bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+<<<<<<< HEAD
                                             padding='same',
                                             name='cond_layers')
         self.upsampling = Conv1DTranspose(n_cond_channels,
                                           upsamp_window,
                                           upsamp_stride,
                                           name='upsampling')
+=======
+                                            padding='same')
+        self.upsampling = Conv1DTranspose(n_cond_channels,
+                                          upsamp_window,
+                                          upsamp_stride)
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
         self.dilate_layers = []
         self.res_layers = []
         self.skip_layers = []
         self.embeddings = tf.get_variable("word_embeddings",
+<<<<<<< HEAD
                                           [n_in_channels, n_residual_channels],
                                           name='embedding_curr')
+=======
+                                          [n_in_channels, n_residual_channels])
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
         self.conv_out = tf.layers.Conv1D(n_out_channels,
                                          kernel_size=1,
                                          use_bias=False,
@@ -60,8 +71,12 @@ class WaveNet(tf.layers.Layer):
                                          bias_initializer=tf.glorot_uniform_initializer(),
                                          kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
                                          bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+<<<<<<< HEAD
                                          padding='same',
                                          name='conv_out')
+=======
+                                         padding='same')
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
         self.conv_end = tf.layers.Conv1D(n_out_channels,
                                          kernel_size=1,
                                          use_bias=False,
@@ -71,8 +86,12 @@ class WaveNet(tf.layers.Layer):
                                          bias_initializer=tf.glorot_uniform_initializer(),
                                          kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
                                          bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+<<<<<<< HEAD
                                          padding='same',
                                          name='conv_end')
+=======
+                                         padding='same')
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
 
         loop_factor = math.floor(math.log2(max_dilation)) + 1
         for i in range(n_layers):
@@ -81,8 +100,12 @@ class WaveNet(tf.layers.Layer):
             # Kernel size is 2 for nv-wavenet
             in_layer = CausalConv1D(2*n_residual_channels,
                                     kernel_size=2, dilation_rate=dilation,
+<<<<<<< HEAD
                                     activation=tf.nn.tanh,
                                     name='dilate_layers')
+=======
+                                    activation=tf.nn.tanh)
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
             self.dilate_layers.append(in_layer)
 
             if i < n_layers - 1:
@@ -94,8 +117,12 @@ class WaveNet(tf.layers.Layer):
                                              padding='same',
                                              bias_initializer=tf.glorot_uniform_initializer(),
                                              kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+<<<<<<< HEAD
                                              bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
                                              name='res_layers')
+=======
+                                             bias_regularizer=tf.contrib.layers.l1_l2_regularizer())
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
                 self.res_layers.append(res_layer)
 
             skip_layer = tf.layers.Conv1D(n_skip_channels,
@@ -106,8 +133,12 @@ class WaveNet(tf.layers.Layer):
                                           bias_initializer=tf.glorot_uniform_initializer(),
                                           kernel_regularizer=tf.contrib.layers.l1_l2_regularizer(),
                                           bias_regularizer=tf.contrib.layers.l1_l2_regularizer(),
+<<<<<<< HEAD
                                           padding='same',
                                           name='skip_layers')
+=======
+                                          padding='same')
+>>>>>>> 71d421a81cd79597e2b2243dd400e21767a5fa6a
             self.skip_layers.append(skip_layer)
 
     def call(self, inputs, training=True):
