@@ -25,7 +25,7 @@ def custom_model_fn(features, labels, mode, params):
     loss = tf.losses.softmax_cross_entropy(onehot_labels=labels, logits=logits)
 
     metrics = {'loss': loss}
-    
+
     tf.summary.scalar('loss', loss)
 
     if mode == tf.estimator.ModeKeys.EVAL:
