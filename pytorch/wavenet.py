@@ -107,13 +107,12 @@ class WaveNet(torch.nn.Module):
         forward_input = forward_input[1]
 
         cond_input = self.upsample(features)
-        #print(forward_input.size())
-        #print(cond_input.size())
+
 
         assert(cond_input.size(2) >= forward_input.size(1))
         if cond_input.size(2) > forward_input.size(1):
             cond_input = cond_input[:, :, :forward_input.size(1)]
-        #print(cond_input.size())
+
         forward_input = self.embed(forward_input.long())
         forward_input = forward_input.transpose(1, 2)
 
@@ -154,7 +153,6 @@ class WaveNet(torch.nn.Module):
         # Replace probability for first value with 0's because we don't know
         first = last * 0.0
         output = torch.cat((first, output), dim=2)
-        #print(output.mean())
 
         return self.dropout(output)
 
@@ -207,17 +205,10 @@ class WaveNet(torch.nn.Module):
         """
         # TODO(rcosta): trim conv artifacts. mauybe pad spec to kernel multiple
         cond_input = self.upsample(features)
-        print("upsample", cond_input.size())
-        print("upsample mean ", cond_input.mean())
         time_cutoff = self.upsample.kernel_size[0] - self.upsample.stride[0]
         cond_input = cond_input[:, :, :-time_cutoff]
-        print("time cutoff", cond_input.size())
         cond_input = self.cond_layers(cond_input).data
-        print("cond layers", cond_input.size())
-        print("cond_input mean", cond_input.mean())
         cond_input = cond_input.view(cond_input.size(0), self.n_layers, -1, cond_input.size(2))
-        print("cond reshape", cond_input.size())
         # This makes the data channels x batch x num_layers x samples
         cond_input = cond_input.permute(2,0,1,3)
-        print(cond_input.size())
         return cond_input
