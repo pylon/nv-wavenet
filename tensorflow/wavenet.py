@@ -115,8 +115,6 @@ class WaveNet(tf.layers.Layer):
         forward_input = inputs[1]
         cond_input = self.upsampling(features)
         cond_input = tf.transpose(cond_input, (0, 2, 1))
-
-        
         cond_input = cond_input[:, :, :forward_input.shape[1]]
 
         forward_input = tf.nn.embedding_lookup(

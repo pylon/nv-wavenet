@@ -44,7 +44,8 @@ class WaveNetEstimator(tf.estimator.Estimator):
         model_dir=None,
         config=None,
         params=None,
-        warm_start_from=None
+        warm_start_from=None,
+        dropout=None
     ):
         config = tf.estimator.RunConfig(
             save_checkpoints_steps=1000
@@ -55,7 +56,8 @@ class WaveNetEstimator(tf.estimator.Estimator):
                 features=features,
                 labels=labels,
                 mode=mode,
-                params=params)
+                params=params,
+            )
 
         super(WaveNetEstimator, self).__init__(
             model_fn=_model_fn, model_dir=model_dir, config=config,

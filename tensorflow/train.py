@@ -31,18 +31,28 @@ def train_input_fn(features, labels, batch_size):
     return dataset.make_one_shot_iterator().get_next()
 
 
-def train(args):
+def load_params(filepath):
+    with open(filepath) as f:
+        data = f.read()
+        config = json.loads(data)
+        wavenet_config = config["wavenet_config"]
+    return wavenet_config
 
+
+def train(args):
+    print(load_params(args.config))
     classifier = WaveNetEstimator(
         model_dir=args.model_dir,
-        params=args.params
+        params=load_params(args.config)
     )
 
-    features, labels = load_data(args.filelist)
+    features, labels = load_data(args.config)
 
     classifier.train(
-        input_fn=lambda: train_input_fn(features, labels, args.batch_size),
-        steps=args.train_steps
+        input_fn=lambda: train_input_fn(features,
+                                        labels,
+                                        int(args.batch_size)),
+        steps=int(args.train_steps)
     )
 
 
@@ -50,13 +60,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train WaveNet model')
     parser.add_argument('--model_dir',
                         help='directory of model checkpoint')
-    parser.add_argument('--params',
-                        help='dictionary of model parameters')
-    parser.add_argument('--filelist',
+    parser.add_argument('--config',
                         help='text file of paths to training files')
     parser.add_argument('--batch_size',
                         help='batch size')
-    parser.add_argument('--steps',
+    parser.add_argument('--train_steps',
                         help='number of training steps')
 
     args = parser.parse_args()
