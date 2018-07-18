@@ -53,7 +53,7 @@ class WaveNetEstimator(tf.estimator.Estimator):
         def _model_fn(features, labels, mode, config, params):
             return custom_model_fn(
                 features=features,
-                lables=labels,
+                labels=labels,
                 mode=mode,
                 params=params)
 

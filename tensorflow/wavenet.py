@@ -49,8 +49,7 @@ class WaveNet(tf.layers.Layer):
         self.res_layers = []
         self.skip_layers = []
         self.embeddings = tf.get_variable("word_embeddings",
-                                          [n_in_channels, n_residual_channels],
-                                          name='embedding_curr')
+                                          [n_in_channels, n_residual_channels])
         self.conv_out = tf.layers.Conv1D(n_out_channels,
                                          kernel_size=1,
                                          use_bias=False,
@@ -117,9 +116,8 @@ class WaveNet(tf.layers.Layer):
         cond_input = self.upsampling(features)
         cond_input = tf.transpose(cond_input, (0, 2, 1))
 
-        # assert(cond_input.shape[2]) >= forward_input.shape[1]
-        if tf.shape(cond_input)[2] > tf.shape(forward_input)[1]:
-            cond_input = cond_input[:, :, :forward_input.shape[1]]
+        
+        cond_input = cond_input[:, :, :forward_input.shape[1]]
 
         forward_input = tf.nn.embedding_lookup(
             self.embeddings, tf.cast(forward_input, dtype=tf.int32))
