@@ -27,13 +27,8 @@
 
 NVCC = nvcc
 
-<<<<<<< HEAD
 ARCH=sm_61
-NVCC_FLAGS = -arch=$(ARCH) -std=c++11 
-=======
-ARCH=sm_70
-NVCC_FLAGS = -arch=$(ARCH) -std=c++11  -g
->>>>>>> ade268998984f5e6341a799823b6e04da2754b67
+NVCC_FLAGS = -arch=$(ARCH) -std=c++11 -g
 NVCC_FLAGS += --use_fast_math
 
 MAX_REGS = 128
