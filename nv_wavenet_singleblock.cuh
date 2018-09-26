@@ -83,7 +83,7 @@ __global__ void nv_wavenet_singleBlock_8R(nv_wavenet_params<T_weight, T_data> pa
     T_data (*h_sh)[R] = (T_data (*)[R])(shared_pool + BATCH_UNROLL*(6*R+S));
 
 
-    for (int sample = 0; sample < params.num_samples; sample++) {
+    for (int sample = params.init_sample; sample < params.init_sample + params.num_samples_per_chunk; sample++) {
 
         // Embedding
         if (threadIdx.x < R) {
@@ -259,11 +259,28 @@ __global__ void nv_wavenet_singleBlock_8R(nv_wavenet_params<T_weight, T_data> pa
 
 
 template <typename T_weight, typename T_data, int R, int S, int A, int BATCH_UNROLL>
-bool launch_singleBlock(nv_wavenet_params<T_weight, T_data> params, cudaStream_t stream) {
-    dim3 grid(params.batch_size/BATCH_UNROLL);
-    dim3 block(8*R);
-    int occ = getOccupancy(0, block.x*block.y*block.z,(void*)nv_wavenet_singleBlock_8R<T_weight, T_data, R, S, A, BATCH_UNROLL>);
-    assert(occ>0);
-    nv_wavenet_singleBlock_8R<T_weight, T_data, R, S, A, BATCH_UNROLL><<<grid,block,0,stream>>>(params);
-    return true;
-}
+struct launch_singleBlock {
+    bool operator() (nv_wavenet_params<T_weight, T_data> params, cudaStream_t stream) {
+        dim3 grid(params.batch_size/BATCH_UNROLL);
+        dim3 block(8*R);
+        int occ = getOccupancy(0, block.x*block.y*block.z,(void*)nv_wavenet_singleBlock_8R<T_weight, T_data, R, S, A, BATCH_UNROLL>);
+        assert(occ>0);
+        nv_wavenet_singleBlock_8R<T_weight, T_data, R, S, A, BATCH_UNROLL><<<grid,block,0,stream>>>(params);
+        return true;
+    }
+};
+
+template <typename T_weight, typename T_data, int S, int A, int BATCH_UNROLL>
+struct launch_singleBlock<T_weight,T_data,128,S,A,BATCH_UNROLL> {
+    bool operator() (nv_wavenet_params<T_weight, T_data> params, cudaStream_t stream) {
+        printf("R=128 with single block not supported\n");
+        return false;
+    }
+};
+template <typename T_weight, typename T_data, int S, int A, int BATCH_UNROLL>
+struct launch_singleBlock<T_weight,T_data,256,S,A,BATCH_UNROLL> {
+    bool operator() (nv_wavenet_params<T_weight, T_data> params, cudaStream_t stream) {
+        printf("R=256 with single block not supported\n");
+        return false;
+    }
+};
